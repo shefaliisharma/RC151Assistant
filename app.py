@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import streamlit as st
 import requests
 import xml.etree.ElementTree as ET
@@ -49,21 +51,32 @@ def get_exchange_rate(currency_pair):
 
 
 # Streamlit UI
-st.title("Currency Exchange Rate")
-st.markdown("### Select a Currency Pair")
+st.title("Convert Salary to CAD")
+st.markdown("### Select the currency of your salary")
 
 # Get the list of currency pairs
 currency_pairs = get_currency_pairs()
+currency_dict = {fx[2:5]: fx for fx in currency_pairs}
 
-# Dropdown to select the currency pair
-currency_pair = st.selectbox("Choose a currency pair:", currency_pairs)
+# Dropdown to select the currency
+salary_currency = st.selectbox("Choose a currency:", list(currency_dict.keys()))
+salary_pair = currency_dict[salary_currency]
 
-# Button to get the exchange rate
-if st.button('Get Exchange Rate'):
+# Enter the salary you earned:
+salary_org = st.number_input(f"Enter the amount you earned in **{salary_currency}**")
+
+# Button to convert the salary
+if st.button('Convert'):
     # Get exchange rate and date for the selected pair
-    if currency_pair:
-        exchange_rate, date = get_exchange_rate(currency_pair)
+    if salary_currency:
+        exchange_rate, date_time_str = get_exchange_rate(salary_pair)
+        salary_CAD = salary_org*exchange_rate
+        #handling date_string
+        date_time_obj = datetime.strptime(date_time_str, "%Y-%m-%dT%H:%M:%SZ")
+        date = date_time_obj.strftime("%m/%d/%Y")
+        year = date_time_obj.strftime("%Y")
 
-        # Display exchange rate and date
-        st.markdown(f"### Exchange Rate: **{exchange_rate}**")
-        st.markdown(f"### Date: **{date}**")
+        # Display converted salary
+        st.markdown(f"### Your {salary_currency} salary in CAD: **{salary_CAD}** on **{date}** at rate: {exchange_rate}")
+        #st.markdown(f"### Date: **{date}**",)
+
