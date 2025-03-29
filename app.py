@@ -70,10 +70,9 @@ st.markdown(f"Since you entered Canada in the year {year_of_entry} and month {mo
 
 
 
-st.markdown("### Enter salary for each month & select the currency too")
+st.markdown("## Enter salary for each month & select the currency too")
 
-months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-
+month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 
 # Initialize default values
 #st.write("Enter an average monthly salary & currency below for default values:")
@@ -144,7 +143,13 @@ if st.button("Convert to CAD"):
     salaries['Salaries in CAD'] = salaries['salary'] * salaries['exchange_rate']
 
     # display the salaries by Year
-    st.dataframe(salaries.groupby('year')[['salary','Salaries in CAD',]].sum())
+    df_summary = salaries.groupby('year', as_index=False)['Salaries in CAD'].sum()
+
+    st.dataframe(df_summary.style.format({
+        'Salaries in CAD': "CAD   {:,.2f}"
+    }))
+    with st.expander("See Full Salary Table"):
+        st.dataframe(salaries)
 
 
 
