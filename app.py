@@ -5,6 +5,10 @@ from pyvalet import ValetInterpreter
 import pandas as pd
 vi = ValetInterpreter()
 
+def get_last_market_date(fx_df, year, month):
+    mask = (fx_df['date'].dt.year == year) & (fx_df['date'].dt.month == month)
+    dates = fx_df.loc[mask, 'date']
+    return dates.max() if not dates.empty else None
 def get_currency_pairs():
     # (pd.DataFrame, pd.DataFrame) : first is group series description, second are the observations
     # [1] gets the observations
@@ -73,64 +77,77 @@ months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul","Aug","Sep","Oct","Nov"
 
 # Initialize default values
 #st.write("Enter an average monthly salary & currency below for default values:")
-default_salary = st.number_input("Monthly Salary", min_value=0.0, key="amount_default")
-default_currency = st.selectbox("Currency", currency_list, key="currency_default")
 
-# Salary variation choice
-salary_varies = st.checkbox("Does your salary vary each month?", value=False)
 
-# Create input table if monthly salary varies a bit:
+salaries = pd.DataFrame(columns=['year', 'month', 'salary', 'currency'])
 
-salaries = {}
+new_rows = []
+for year in range(entry_date.year, entry_date.year - 3, -1):
+    st.markdown(f"### Year {year}")
+    default_salary = st.number_input(f"Monthly Salary in year {year}", min_value=0.0, key=f"amount_default_{year}")
+    default_currency = st.selectbox("Currency", currency_list, key=f"currency_default_{year}")
+    # Salary variation choice
+    salary_varies = st.checkbox("Does your salary vary each month?", value=False, key=f"salary_varies_{year}")
+    last = 12
+    if year == entry_date.year:
+        if entry_date.day == 1:
+            last = entry_date.month - 1
+        else:
+            last = entry_date.month
+    if salary_varies:
+        # Create input table if monthly salary varies a bit:
 
-if salary_varies:
-    with st.container():
-        st.markdown("### Enter salary for each month & select the currency too:")
-        for month in months:
-            col1, col2, col3 = st.columns([1, 1, 1])
+        with st.container():
+            st.markdown("### Enter salary for each month & select the currency too:")
+            for month in range(1, last + 1):
+                col1, col2, col3 = st.columns([1, 1, 1])
+                month_name = month_names[month - 1]
+                with col1:
+                    st.markdown(f"**{month_name}**")
+                with col2:
+                    amount_row = st.number_input(f"Amount for {month_name}", min_value=0.0, value=default_salary,
+                                                  key=f"amount_{month}_{year}")
+                with col3:
+                    currency_row = st.selectbox(f"Currency for {month_name}", currency_list,
+                                                               index=currency_list.index(default_currency),
+                                                               key=f"currency_{month}_{year}")
+                #appending row
+                new_rows.append({'year': year, 'month': month, 'salary': amount_row, 'currency': currency_row})
 
-            with col1:
-                st.markdown(f"**{month}**")
-            with col2:
-                salaries[month] = {"amount": st.number_input(f"Amount for {month}", min_value=0.0, value=default_salary,
-                                                             key=f"amount_{month}")}
-            with col3:
-                salaries[month]["currency"] = st.selectbox(f"Currency for {month}", currency_list,
-                                                           index=currency_list.index(default_currency),
-                                                           key=f"currency_{month}")
-else:
-    #if salary doesn't vary
-    for month in months:
-        salaries[month] = {"amount": default_salary, "currency": default_currency}
+    else:
+        for month in range(1, last + 1):
+            new_rows.append({'year': year, 'month': month, 'salary': default_salary, 'currency': default_currency})
+
+salaries = pd.concat([salaries, pd.DataFrame(new_rows)], ignore_index=True)
+
 
 #button to convert salaries
 if st.button("Convert to CAD"):
     st.markdown("## Converted Salaries (in CAD)")
 
-    total_salary_cad = 0
-    converted_salaries = []
+    # load the fx_df dataframe, fx_df = FX_RATES_DAILY from Bank of Canada
+    fx_df = vi.get_group_observations("FX_RATES_DAILY", response_format='csv')[1]
+    # change the name of the 0th column from "/r/ndate" to just "date"
+    fx_df = fx_df.rename(columns={fx_df.columns[0]: "date"})
+    # change the type of date column from object to datetime
+    fx_df["date"] = pd.to_datetime(fx_df["date"])
+    print(salaries)
+    # adding a date column from fx_df, eom_date = last market open date for the month
+    salaries['eom_date'] = salaries.apply(lambda row: get_last_market_date(fx_df, row['year'], row['month']), axis=1)
 
-    for month, data in salaries.items():
-        amount = data["amount"]
-        currency = data["currency"]
-        currency_pair = currency_dict.get(currency, None)
+    # for eom_date, fetch the exchange rate from fx_df
+    salaries['exchange_rate'] = salaries.apply(
+        lambda row: fx_df.loc[fx_df['date'] == row['eom_date'], f"FX{row['currency']}CAD"].values[0]
+        if row['eom_date'] is not None else None, axis=1)
 
-        if currency_pair:
-            exchange_rate, date = get_exchange_rate(currency_pair)
-            if exchange_rate:
-                converted_amount = round(amount * exchange_rate, 2)
-                total_salary_cad += converted_amount
-            else:
-                converted_amount, date = "Error", "N/A"
-        else:
-            converted_amount, date = "Invalid Currency", "N/A"
+    #now convert the salaries to CAD
+    salaries['Salaries in CAD'] = salaries['salary'] * salaries['exchange_rate']
 
-        converted_salaries.append([month, amount, currency, converted_amount, date, exchange_rate])
+    # display the salaries by Year
+    st.dataframe(salaries.groupby('year')[['salary','Salaries in CAD',]].sum())
 
-    # Display results as a table
-    st.table(
-        [["Month", "Amount", "Currency", "Converted to CAD", "Date", "Exchange Rate"]] + converted_salaries
-    )
 
-    st.markdown(f"## Total Salary in CAD for the Year: **{total_salary_cad:,.2f}**")
+
+
+
 
