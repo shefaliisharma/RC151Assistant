@@ -38,7 +38,7 @@ currency_pairs = get_currency_pairs()
 currency_dict = {fx[2:5]: fx for fx in currency_pairs}
 currency_list = list(currency_dict.keys())
 
-st.header("Salary Conversion for RC151 Form")
+st.header("World Income Calculation for RC151 Form")
 st.caption("Based on Daily Exchange Rates from Bank of Canada :flag-ca:")
 entry_date = st.date_input("# Entry Date in Canada:", min_value='2019-01-01')
 
