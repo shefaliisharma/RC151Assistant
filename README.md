@@ -1,1 +1,1 @@
-[See demo]([url](https://rc151assistant.streamlit.app))
+[See demo](https://rc151assistant.streamlit.app)
