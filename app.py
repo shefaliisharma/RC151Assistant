@@ -47,7 +47,7 @@ year_of_entry = entry_datetime.year
 month_of_entry = entry_datetime.month_name()
 
 if entry_date:
-    if entry_datetime.month < 5:
+    if entry_datetime.month <= 5:
         st.markdown(f"Since you entered Canada in the `{month_of_entry} {year_of_entry}`, you'll need to enter the income you earned in `{year_of_entry}` up till the date of your entry and your income in the 2 years prior, i.e., `{year_of_entry-1}` and `{year_of_entry-2}`.")
     else:
         st.markdown(f"Since you entered Canada in the `{month_of_entry} {year_of_entry}`, you'll need to enter the income you earned in {year_of_entry} up till the date of your entry and your income in the previous year, i.e., `{year_of_entry-1}`.")
