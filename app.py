@@ -5,8 +5,9 @@ from pyvalet import ValetInterpreter
 import pandas as pd
 vi = ValetInterpreter()
 
-def get_last_market_date(fx_df, year, month):
-    mask = (fx_df['date'].dt.year == year) & (fx_df['date'].dt.month == month)
+def get_last_market_date(fx_df, year, month, entry_date):
+    entry_datetime = pd.to_datetime(entry_date)
+    mask = (fx_df['date'].dt.year == year) & (fx_df['date'].dt.month == month) & (fx_df['date'] < entry_datetime)
     dates = fx_df.loc[mask, 'date']
     return dates.max() if not dates.empty else None
 def get_currency_pairs():
@@ -109,7 +110,7 @@ if st.button("Convert to CAD"):
     fx_df["date"] = pd.to_datetime(fx_df["date"])
     print(salaries)
     # adding a date column from fx_df, eom_date = last market open date for the month
-    salaries['eom_date'] = salaries.apply(lambda row: get_last_market_date(fx_df, row['year'], row['month']), axis=1)
+    salaries['eom_date'] = salaries.apply(lambda row: get_last_market_date(fx_df, row['year'], row['month'], entry_date), axis=1)
 
     # for eom_date, fetch the exchange rate from fx_df
     salaries['exchange_rate'] = salaries.apply(
