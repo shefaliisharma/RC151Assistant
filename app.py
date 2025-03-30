@@ -16,38 +16,7 @@ def get_currency_pairs():
     # columns are ["/r/ndate", "FXCADAUD", "FX...", ...], so return all possible FX*** values
     return fx_df.columns.tolist()[1:]
 
-def get_exchange_rate(currency_pair, date=None):
-    fx_df = vi.get_group_observations("FX_RATES_DAILY", response_format='csv')[1]
-    # change the name of the 0th column from "/r/ndate" to just "date"
-    fx_df = fx_df.rename(columns={fx_df.columns[0]: "date"})
-    # change the type of date column from object to datetime
-    fx_df["date"] = pd.to_datetime(fx_df["date"])
 
-    if date is None:
-        # if caller of the method does not provide a date, instantiate it to today's value
-        date = datetime.today().strftime("%Y-%m-%d")
-
-    # ensure date is in the datetime format
-    date = pd.to_datetime(date)
-
-    # fx_df[['date', currency_pair]] -> this means get 'date' and $currency_pair columns, drop other columns
-    # then on that data frame, get rows where the date column has the provided date
-    fx_date_rate = fx_df[['date', currency_pair]][fx_df['date'] == date]
-
-    if fx_date_rate.iloc[0,1] is None:
-        print("FIX ME! Find the date just before the provided date which has a value in the data frame")
-        # todo
-    else:
-        # iloc means get the cell referenced by the row and column number, here for e.g., get cell at 0th column, 1st row
-        return fx_date_rate.iloc[0,1]
-
-
-def get_last_day_of_year_and_month(year, month):
-    # (pd.DataFrame, pd.DataFrame) : first is group series description, second are the observations
-    # [1] gets the observations
-    fx_df = vi.get_group_observations("FX_RATES_DAILY", response_format='csv')[1]
-
-    date_df = fx_df[fx_df[0]]
 
 
 # Get the list of currency pairs
@@ -81,7 +50,15 @@ month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul","Aug","Sep","Oct",
 salaries = pd.DataFrame(columns=['year', 'month', 'salary', 'currency'])
 
 new_rows = []
-for year in range(entry_date.year, entry_date.year - 3, -1):
+
+# step_year: world income in RC151 is needed for past 3 years
+step_year = 3
+
+# only if you became a resident of Canada between January 1 and May 31 of the year you entered
+if entry_date.month > 5:
+    step_year = 2
+
+for year in range(entry_date.year, entry_date.year - step_year, -1):
     st.markdown(f"### Year {year}")
     default_salary = st.number_input(f"Monthly Salary in year {year}", min_value=0.0, key=f"amount_default_{year}")
     default_currency = st.selectbox("Currency", currency_list, key=f"currency_default_{year}")
